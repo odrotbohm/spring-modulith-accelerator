@@ -1,0 +1,100 @@
+accelerator:
+  displayName: Spring Modulith application
+  description: A modulithic Spring Boot application based on Spring Modulith
+
+  tags:
+  - spring
+  - java
+  - modulith
+
+  options:
+  - name: artifactId
+    inputType: text
+    defaultValue: "acme-application"
+    label: Module artifact name
+    required: true
+
+  - name: groupId
+    inputType: text
+    defaultValue: "com.example"
+    label: Module group name
+    required: true
+
+  - name: packageName
+    inputType: text
+    defaultValue: "com.example.application"
+    label: Application root package
+    required: true
+
+  - name: applicationMmodules
+    label: The application's modules
+    description: Add and remove as many modules as you please
+    dataType: [text]
+    defaultValue: []
+
+  - name: useEventPublicationRegistry
+    label: Use Event Publication Registry?
+    dataType: boolean
+    defaultValue: true
+
+  - name: primaryPersistenceType
+    inputType: select
+    required: true
+    defaultValue: none
+    dependsOn:
+      name: useEventPublicationRegistry
+    choices:
+    - value: none
+      text: None
+    - value: jdbc
+      text: JDBC
+    - value: jpa
+      text: Jakarta Persistence API
+    - value: mongodb
+      text: MongoDB
+
+  - name: databaseType
+    inputType: select
+    label: Database to use
+    dependsOn:
+      name: primaryPersistenceType
+      value: jdbc || jpa
+    choices:
+      - value: "postgres"
+        text: PostgreSQL
+      - value: "mysql"
+        text: MySQL
+
+  imports:
+  - name: java-version
+  - name: spring-boot-postgresql
+  - name: spring-boot-mysql
+  
+engine:
+
+  chain:
+  - merge:
+    - include: [ "**" ]
+      exclude: [ "pom.xml" ]
+    - include: [ "pom.xml" ]
+      chain:
+      - type: ReplaceText
+        substitutions:
+        - text: "<groupId>com.vmware.tap.accelerators</groupId>"
+          with: "'<groupId>' + #groupId + '</groupId>'"
+        - text: "<artifactId>spring-modulith-accelerator</artifactId>"
+          with: "'<artifactId>' + #artifactId + '</artifactId>'"
+  - merge:
+    - exclude: [ "**/*.java" ]
+    - include: [ "**/*.java" ]
+      let:
+      - name: packageDirectory
+        expression: '#packageName.replace(".", "/")'
+      chain:
+      - type: ReplaceText
+        substitutions:
+        - text: "com.vmware.tap.accelerators.restservicedb"
+          with: "#packageName"
+      - type: RewritePath
+        regex: "src/(?<sourceset>.*)/java/example/(?<untouchedpath>.*)"
+        rewriteTo: "'src/' + #sourceset + '/java/' + #packageDirectory + '/' + #untouchedpath"
